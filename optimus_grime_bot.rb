@@ -3,7 +3,7 @@
 
 GRID_ERROR = "The grid parameter must contain two postitive numbers seperated by an 'x' i.e '5x5'".freeze
 COORDINATE_ERROR_1 = "You must pass in at least one coordinate".freeze
-COORDINATE_ERROR_2 = "is not a valid coordinate, coordinates must contain positive values within the contraints of the grid".freeze
+COORDINATE_ERROR_2 = "is not a valid coordinate, coordinates must contain values within the contraints of the grid".freeze
 COORDINATE_ERROR_3 = "is not valid, coordinates must be in the correct format i.e. '(1, 5)'".freeze
 
 def validate_grid_param_format(grid_param)
@@ -19,9 +19,9 @@ def validate_coordinate_param_format(coordinate)
   coordinate.match(/^[(]\d+[,][ ]\d+[)]$/) ? true : false
 end
 
-# coordinates must have positive values within the contraints of the grid
+# coordinates must have values within the contraints of the grid
 def validate_coordinate_param_values(coordinate, grid)
-  (1..grid[0]).include?(coordinate[0]) && (1..grid[1]).include?(coordinate[1])
+  (0..(grid[0] - 1)).include?(coordinate[0]) && (0..(grid[1] - 1)).include?(coordinate[1])
 end
 
 def get_coordinates(coordinates_params, grid)

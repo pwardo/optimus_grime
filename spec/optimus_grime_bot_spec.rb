@@ -52,20 +52,20 @@ RSpec.describe "optimus_grime_bot", :type => :request do
         [5, 5]
       end
 
-      it 'should return true if coordinate param values are positive values within the contraints of the grid' do
-        [[1, 1], [2, 3], [5, 5]].each do |coordinate|
+      it 'should return true if coordinate param values are values within the contraints of the grid' do
+        [[0, 1], [1, 0], [1, 1], [2, 3], [4, 4]].each do |coordinate|
           expect(validate_coordinate_param_values(coordinate, grid)).to be(true)
         end
       end
 
-      it 'should return false if coordinate param values are not positive values' do
-        [[0, 1], [1, 0], [-1, 1], [1, -1]].each do |coordinate|
+      it 'should return false if coordinate param values are less than zero' do
+        [[-1, 1], [1, -1]].each do |coordinate|
           expect(validate_coordinate_param_values(coordinate, grid)).to be(false)
         end
       end
 
       it 'should return false if coordinate param values are not within the contraints of the grid' do
-        [[6, 5], [5, 6]].each do |coordinate|
+        [[5, 4], [4, 5]].each do |coordinate|
           expect(validate_coordinate_param_values(coordinate, grid)).to be(false)
         end
       end
@@ -117,6 +117,7 @@ RSpec.describe "optimus_grime_bot", :type => :request do
       expect(get_instructions([[1, 3], [4, 4]])).to eq('ENNNCEEENC')
       expect(get_instructions([[1, 1], [2, 2], [1, 3], [3, 1], [5, 5], [2, 2]])).to eq('ENCENCWNCEESSCEENNNNCWWWSSSC')
       expect(get_instructions([[5, 5], [4, 4], [3, 3], [3, 1], [1, 1]])).to eq('EEEEENNNNNCWSCWSCSSCWWC')
+      expect(get_instructions([[5, 5], [4, 4], [3, 3], [3, 1], [1, 1], [0, 0]])).to eq('EEEEENNNNNCWSCWSCSSCWWCWSC')
     end
   end
 end
