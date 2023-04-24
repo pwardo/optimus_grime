@@ -1,31 +1,39 @@
 #!/usr/bin/ruby
 require_relative 'optimus_grime_bot'
+require_relative 'constants'
+# require 'debug'
 
-# 1. get arguments
 grid_param, *coordinates_params = ARGV
-@errors = []
+optimus_grime = OptimusGrimeBot.new(grid_param, coordinates_params)
 
-# 2. Validate grid argument format
-unless validate_grid_param_format(grid_param)
-  @errors << GRID_ERROR
+while !optimus_grime.grid_is_valid?
+  puts "Please enter a valid grid param i.e. '5x5'"
+  optimus_grime.grid_param = STDIN.gets.chomp
 end
 
-# 3. Convert grid to array of ints
-grid = grid_param.split('x').map(&:to_i)
+optimus_grime.process_coordinates
+while !optimus_grime.invalid_coordinates.empty?
+  puts "You have #{optimus_grime.invalid_coordinates.length} invalid coordinates, would you like to fix them? [Y/n]"
 
-# 4. Validate that grid values are positive numbers
-unless validate_grid_param_values(grid)
-  @errors << GRID_ERROR
-end
+  if STDIN.gets.chomp.downcase == 'y'
+    optimus_grime.invalid_coordinates.each do |invalid_coordinate|
+      value = invalid_coordinate[:value]
+      while !optimus_grime.coordinate_is_valid?(value)
+        puts "#{invalid_coordinate[:error_message]}. Please enter new value for '#{invalid_coordinate[:value]}'"
+        value = STDIN.gets.chomp
+      end
 
-# 5. get coordinates / @errors
-coordinates = get_coordinates(coordinates_params, grid)
-
-unless @errors.empty?
-  @errors.uniq.each do |error|
-    puts error
+      if optimus_grime.coordinate_is_valid?(value)        
+        optimus_grime.valid_coordinates[invalid_coordinate[:idx]] = optimus_grime.parse_coordinate(value)
+        optimus_grime.invalid_coordinates.delete(invalid_coordinate)
+      end
+    end
+  else
+    puts "Goodbye!!"
+    return
   end
-  return
+
 end
 
-puts get_instructions(coordinates)
+puts optimus_grime.get_instructions
+

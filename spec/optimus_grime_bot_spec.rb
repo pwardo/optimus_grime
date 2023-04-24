@@ -1,123 +1,174 @@
-# spec/optimus_grime_bot_spec.rb
+require_relative '../constants'
 require_relative '../optimus_grime_bot'
 
-RSpec.describe "optimus_grime_bot", :type => :request do
+RSpec.describe "OptimusGrimeBot", :type => :request do
   describe 'grid param validation' do
-    describe "validate_grid_param_format" do
+    describe "grid_format_is_valid?" do
       it "should return true if grid param is in the valid format '5x5'" do
         ['5x5', '10x5', '10x100'].each do |grid_param|
-          expect(validate_grid_param_format(grid_param)).to be(true)
+          optimus_grime = OptimusGrimeBot.new(grid_param, '')
+          expect(optimus_grime.send(:grid_format_is_valid?)).to be(true)
         end
       end
 
       it "should return false if grid param is in an invalid format i.e. '5 5'" do
         ['5_5', '10 5', '10x', 'x10', '10y10', '-10x-10'].each do |grid_param|
-          expect(validate_grid_param_format(grid_param)).to be(false)
+          optimus_grime = OptimusGrimeBot.new(grid_param, '')
+          expect(optimus_grime.send(:grid_format_is_valid?)).to be(false)
         end
       end
     end
 
-    describe "validate_grid_param_values" do
+    describe "grid_values_are_positive?" do
       it "should return true if grid param values are positive numbers i.e '5x5'" do
-        [[5, 5], [10, 5], [5, 100]].each do |grid_param|
-          expect(validate_grid_param_values(grid_param)).to be(true)
+        ['5x5', '10x5', '5x100'].each do |grid_param|
+          optimus_grime = OptimusGrimeBot.new(grid_param, '')
+          expect(optimus_grime.send(:grid_values_are_positive?)).to be(true)
         end
       end
 
       it 'should return false if grid param values are not positive numbers' do
-        [[0, 5], [5, 0], [-1, 5], [5, -15], [0, 1], [0, 1]].each do |grid_param|
-          expect(validate_grid_param_values(grid_param)).to be(false)
+        ['0x5', '5x0', '0x0'].each do |grid_param|
+          optimus_grime = OptimusGrimeBot.new(grid_param, '')
+          expect(optimus_grime.send(:grid_values_are_positive?)).to be(false)
         end
       end
     end
   end
 
   describe 'coordinate params validation' do
-    describe 'validate_coordinate_param_format' do
+    describe 'coordinate_format_is_valid?' do
       it "should return true if coordinate param is in the valid format '(1, 1)'" do
         ['(1, 4)', '(4, 1)', '(100, 100)'].each do |coordinate_param|
-          expect(validate_coordinate_param_format(coordinate_param)).to be(true)
+          optimus_grime = OptimusGrimeBot.new('5x5', '')
+          expect(optimus_grime.send(:coordinate_format_is_valid?, coordinate_param)).to be(true)
         end
       end
 
       it "should return false if coordinate param is in an invalid format i.e. '(1 1)'" do
         ['(1 1)', '1, 1', '(1,1)', '(1, 1', '(-1, 1)'].each do |coordinate_param|
-          expect(validate_coordinate_param_format(coordinate_param)).to be(false)
+          optimus_grime = OptimusGrimeBot.new('5x5', '')
+          expect(optimus_grime.send(:coordinate_format_is_valid?, coordinate_param)).to be(false)
         end
       end
     end
 
-    describe "validate_coordinate_param_values" do
+    describe "coordinate_values_within_constraints?" do
+      let(:grid_param) do
+        '5x5'
+      end
+
       let(:grid) do
         [5, 5]
       end
 
       it 'should return true if coordinate param values are values within the contraints of the grid' do
         [[0, 1], [1, 0], [1, 1], [2, 3], [4, 4]].each do |coordinate|
-          expect(validate_coordinate_param_values(coordinate, grid)).to be(true)
+          optimus_grime = OptimusGrimeBot.new(grid_param, '')
+          expect(optimus_grime.send(:coordinate_values_within_constraints?, coordinate, grid)).to be(true)
         end
       end
 
       it 'should return false if coordinate param values are less than zero' do
         [[-1, 1], [1, -1]].each do |coordinate|
-          expect(validate_coordinate_param_values(coordinate, grid)).to be(false)
+          optimus_grime = OptimusGrimeBot.new(grid_param, '')
+          expect(optimus_grime.send(:coordinate_values_within_constraints?, coordinate, grid)).to be(false)
         end
       end
 
       it 'should return false if coordinate param values are not within the contraints of the grid' do
         [[5, 4], [4, 5]].each do |coordinate|
-          expect(validate_coordinate_param_values(coordinate, grid)).to be(false)
+          optimus_grime = OptimusGrimeBot.new(grid_param, '')
+          expect(optimus_grime.send(:coordinate_values_within_constraints?, coordinate, grid)).to be(false)
         end
       end
     end
   end
 
-  describe 'get_coordinates' do
+  describe 'process_coordinates' do
+    let(:grid_param) do
+      '5x5'
+    end
+
     let(:grid) do
       [5, 5]
     end
 
-    before(:each) do
-      @errors = []
+    it 'should populate invalid_coordinates array with one object with error' do
+      optimus_grime = OptimusGrimeBot.new(grid_param, '')
+      optimus_grime.process_coordinates
+
+      expect(optimus_grime.invalid_coordinates.length).to be(1)
+      expect(optimus_grime.invalid_coordinates.first[:error_message]).to eq(COORDINATE_ERROR_1)
     end
 
-    it 'should return nil and create an error and if coordinates param is empty' do
-      expect(get_coordinates('', grid)).to be(nil)
-      expect(@errors).to include(COORDINATE_ERROR_1)
+    it 'should pass coordinates to valid_coordinates array if all values are valid' do
+      optimus_grime = OptimusGrimeBot.new(grid_param, ['(1, 4)', '(4, 1)', '(3, 3)'])
+      optimus_grime.process_coordinates
+      expect(optimus_grime.valid_coordinates).to eq([[1, 4], [4, 1], [3, 3]])
+      expect(optimus_grime.invalid_coordinates).to be_empty
     end
 
-    it 'should parse and return an array of coordinates if all values are valid' do
-      coordinate_param = '(1, 4)', '(4, 1)', '(3, 3)'
-      expect(get_coordinates(coordinate_param, grid)).to eq([[1, 4], [4, 1], [3, 3]])
-      expect(@errors).to be_empty
+    it 'should populate the invalid_coordinates array with coordinates that are beyond grid contstraints' do
+      optimus_grime = OptimusGrimeBot.new(grid_param, ['(1, 4)', '(4, 1)', '(100, 100)', '(200, 200)'])
+      optimus_grime.process_coordinates
+      
+      expect(optimus_grime.valid_coordinates).to eq([[1, 4], [4, 1], nil, nil])
+      expect(optimus_grime.invalid_coordinates.length).to be(2)
+      expect(optimus_grime.invalid_coordinates[0][:error_message]).to eq('(100, 100) ' + COORDINATE_ERROR_2)
+      expect(optimus_grime.invalid_coordinates[1][:error_message]).to eq('(200, 200) ' + COORDINATE_ERROR_2)
     end
 
-    it 'should parse and return an array of valid coordinates and create errors for coordinates outside of the grid' do
-      coordinate_param = '(1, 4)', '(4, 1)', '(100, 100)'
-      expect(get_coordinates(coordinate_param, grid)).to eq([[1, 4], [4, 1]])
-      expect(@errors).to include("(100, 100) #{COORDINATE_ERROR_2}")
-    end
-
-    it 'should parse and return an array of valid coordinates and create errors coordinates in an invalid format' do
-      coordinate_param = '(1, 4)', '(4, 1)', '100, 100'
-      expect(get_coordinates(coordinate_param, grid)).to eq([[1, 4], [4, 1]])
-      expect(@errors).to include("100, 100 #{COORDINATE_ERROR_3}")
+    it 'should populate the invalid_coordinates array with coordinates are in an invalid format' do
+      optimus_grime = OptimusGrimeBot.new(grid_param, ['(1, 4)', '(4, 1)', '100, 100', '200, 200'])
+      optimus_grime.process_coordinates
+      
+      expect(optimus_grime.valid_coordinates).to eq([[1, 4], [4, 1], nil, nil])
+      expect(optimus_grime.invalid_coordinates.length).to be(2)
+      expect(optimus_grime.invalid_coordinates[0][:error_message]).to eq('100, 100 ' + COORDINATE_ERROR_3)
+      expect(optimus_grime.invalid_coordinates[1][:error_message]).to eq('200, 200 ' + COORDINATE_ERROR_3)
     end
   end
 
   describe 'get_instructions' do
+    let(:grid_param) do
+      '5x5'
+    end
+
     it 'should generate correct instructions when given a single coordinate' do
-      expect(get_instructions([[1, 1]])).to eq('ENC')
-      expect(get_instructions([[2, 2]])).to eq('EENNC')
-      expect(get_instructions([[1, 3]])).to eq('ENNNC')
-      expect(get_instructions([[3, 1]])).to eq('EEENC')
+      optimus_grime = OptimusGrimeBot.new(grid_param, ['(1, 1)'])
+      optimus_grime.process_coordinates
+      expect(optimus_grime.get_instructions).to eq('ENC')
+
+      optimus_grime = OptimusGrimeBot.new(grid_param, ['(2, 2)'])
+      optimus_grime.process_coordinates
+      expect(optimus_grime.get_instructions).to eq('EENNC')
+
+      optimus_grime = OptimusGrimeBot.new(grid_param, ['(1, 3)'])
+      optimus_grime.process_coordinates
+      expect(optimus_grime.get_instructions).to eq('ENNNC')
+
+      optimus_grime = OptimusGrimeBot.new(grid_param, ['(3, 1)'])
+      optimus_grime.process_coordinates
+      expect(optimus_grime.get_instructions).to eq('EEENC')
     end
 
     it 'should generate correct instructions when given multiple coordinates' do
-      expect(get_instructions([[1, 3], [4, 4]])).to eq('ENNNCEEENC')
-      expect(get_instructions([[1, 1], [2, 2], [1, 3], [3, 1], [5, 5], [2, 2]])).to eq('ENCENCWNCEESSCEENNNNCWWWSSSC')
-      expect(get_instructions([[5, 5], [4, 4], [3, 3], [3, 1], [1, 1]])).to eq('EEEEENNNNNCWSCWSCSSCWWC')
-      expect(get_instructions([[5, 5], [4, 4], [3, 3], [3, 1], [1, 1], [0, 0]])).to eq('EEEEENNNNNCWSCWSCSSCWWCWSC')
+      optimus_grime = OptimusGrimeBot.new(grid_param, ['(1, 3)', '(4, 4)'])
+      optimus_grime.process_coordinates
+      expect(optimus_grime.get_instructions).to eq('ENNNCEEENC')
+
+      optimus_grime = OptimusGrimeBot.new(grid_param, ['(1, 1)', '(2, 2)', '(1, 3)', '(3, 1)', '(4, 4)', '(2, 2)'])
+      optimus_grime.process_coordinates
+      expect(optimus_grime.get_instructions).to eq('ENCENCWNCEESSCENNNCWWSSC')
+
+      optimus_grime = OptimusGrimeBot.new(grid_param, ['(1, 1)', '(4, 4)', '(3, 3)', '(3, 1)', '(1, 1)'])
+      optimus_grime.process_coordinates
+      expect(optimus_grime.get_instructions).to eq('ENCEEENNNCWSCSSCWWC')
+
+      optimus_grime = OptimusGrimeBot.new(grid_param, ['(0, 0)', '(4, 4)', '(3, 3)', '(3, 1)', '(1, 1)', '(0, 0)'])
+      optimus_grime.process_coordinates
+      expect(optimus_grime.get_instructions).to eq('CEEEENNNNCWSCSSCWWCWSC')
     end
   end
 end
