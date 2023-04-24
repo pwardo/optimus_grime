@@ -24,6 +24,7 @@ def validate_coordinate_param_values(coordinate, grid)
   (0..(grid[0] - 1)).include?(coordinate[0]) && (0..(grid[1] - 1)).include?(coordinate[1])
 end
 
+# get coordinates and populate @errors array if error are found
 def get_coordinates(coordinates_params, grid)
   if coordinates_params.empty?
     @errors << COORDINATE_ERROR_1
